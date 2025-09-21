@@ -37,7 +37,7 @@ uv run scanner.py
 ## Run mcp server for your llm
 
 ```bash
-uv ruin main.py
+uv run main.py
 ```
 
 ## Add mcp server to llm studio with mcp.json
