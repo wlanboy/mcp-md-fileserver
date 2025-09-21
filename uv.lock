@@ -709,7 +709,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fastmcp", specifier = ">=2.12.3" },
+    { name = "fastmcp", specifier = "==2.12.3" },
     { name = "pip", specifier = ">=25.2" },
     { name = "spacy", specifier = ">=3.8.7" },
     { name = "uvicorn", specifier = ">=0.36.0" },
