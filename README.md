@@ -39,3 +39,15 @@ uv run scanner.py
 ```bash
 uv ruin main.py
 ```
+
+## Add mcp server to llm studio with mcp.json
+- Show Settings
+- Programm
+- Install
+- Edit mcp.json
+
+## Load model and use mcp server
+- ask "Finde Dateien mit docker oder gitea"
+- it will show a list of all found markdown files with keywords
+- ask "Zeige die Datei docker.md an"
+- it will show you the formated content of the file which than will be added to the context to ask further questions
