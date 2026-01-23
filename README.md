@@ -1,53 +1,104 @@
-# MCP Markdown File Server
-A FastMCP-compliant Python server that scans Markdown files, extracts subject/verb keywords using spaCy, stores metadata in SQLite, and exposes endpoints for keyword-based search and content retrieval.
+# MCP Markdown Wissensdatenbank
 
----
+Ein MCP-Server (Model Context Protocol) zur Verwaltung von Markdown-Dokumenten mit automatischer Stichwort-Extraktion. LLMs können damit eine Sammlung von Markdown-Dateien durchsuchen und deren Inhalte abrufen.
 
 ## Features
 
-- Periodic scan of a folder for `.md` files
-- NLP keyword extraction (subjects & verbs only)
-- SQLite-based metadata storage
-- MCP endpoints for:
-  - `POST /search` → Find files by keywords
-  - `POST /content` → Return file contents (Markdown or JSON)
+- **Automatischer Scan** von Markdown-Dateien mit konfigurierbarem Intervall
+- **NLP-Keyword-Extraktion** mit spaCy (Substantive & Verben)
+- **Volltextsuche** im gesamten Dateiinhalt
+- **SQLite-Datenbank** für schnellen Zugriff (inkl. gecachtem Content)
+- **Semantische Instruktionen** für LLMs mit Workflow-Empfehlungen
+- **Prompt-Templates** für häufige Aufgaben
 
----
+## Tools
 
-## Installation (with [uv](https://github.com/astral-sh/uv))
+| Tool | Beschreibung |
+|------|--------------|
+| **Zeige alle Stichwörter** | Listet alle verfügbaren Keywords mit Häufigkeit |
+| **Finde Dateien mit** | Sucht nach Dateien anhand von Stichwörtern |
+| **Volltextsuche** | Durchsucht den gesamten Dateiinhalt |
+| **Liste alle Dateien** | Zeigt alle indexierten Dokumente |
+| **Zeige die Datei** | Gibt den Inhalt einer Datei zurück |
+
+## Prompts
+
+| Prompt | Beschreibung |
+|--------|--------------|
+| **Thema recherchieren** | Systematische Recherche zu einem Thema |
+| **Dokument zusammenfassen** | Strukturierte Zusammenfassung einer Datei |
+| **Wissenslücke finden** | Analysiert fehlende Themen in einem Bereich |
+
+## Installation
+
+### Voraussetzungen
+
+- Python 3.11+
+- [uv](https://github.com/astral-sh/uv) (empfohlen)
+
+### Setup
 
 ```bash
+# uv installieren (falls nicht vorhanden)
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
 
-
-## Install dependencies
-```bash
+# Dependencies installieren
 uv sync
-uv run -- spacy download en_core_web_sm #for english md files
-uv run -- spacy download de_core_web_sm #for german md files
+
+# spaCy-Modell herunterladen
+uv run -- python -m spacy download en_core_web_sm  # Englisch
+uv run -- python -m spacy download de_core_web_sm  # Deutsch
 ```
 
-## Run md file scanner
+## Konfiguration
+
+Umgebungsvariablen (oder Standardwerte in `config.py`):
+
+| Variable | Beschreibung | Standard |
+|----------|--------------|----------|
+| `MCP_SCAN_FOLDER` | Ordner mit Markdown-Dateien | `/markdowns` |
+| `MCP_SCAN_INTERVAL` | Scan-Intervall in Sekunden | `60` |
+| `MCP_DB_PATH` | Pfad zur SQLite-Datenbank | `./model_context.db` |
+| `MCP_NLP_MODEL` | spaCy-Modell | `en_core_web_sm` |
+
+## Verwendung
+
+### 1. Scanner starten
+
+Der Scanner überwacht den konfigurierten Ordner und indiziert Markdown-Dateien:
 
 ```bash
 uv run scanner.py
 ```
 
-## Run mcp server for your llm
+### 2. MCP-Server starten
 
 ```bash
 uv run main.py
 ```
 
-## Add mcp server to llm studio with mcp.json
-- Show Settings
-- Programm
-- Install
-- Edit mcp.json
+Der Server läuft auf `http://0.0.0.0:8000/mcp`.
 
-## Load model and use mcp server
-- ask "Finde Dateien mit docker oder gitea"
-- it will show a list of all found markdown files with keywords
-- ask "Zeige die Datei docker.md an"
-- it will show you the formated content of the file which than will be added to the context to ask further questions
+### 3. Mit LLM verbinden
+
+#### LM Studio
+
+1. Settings → Program → Install
+2. `mcp.json` bearbeiten und Server hinzufügen
+
+#### Claude Desktop / andere MCP-Clients
+
+Server-URL: `http://localhost:8000/mcp`
+
+## Beispiel-Interaktion
+
+```
+Nutzer: Was wissen wir über Docker?
+
+LLM:
+1. Nutzt "Zeige alle Stichwörter" → findet "docker", "container", "image"
+2. Nutzt "Finde Dateien mit" ["docker", "container"] → findet docker.md, docker-compose.md
+3. Nutzt "Zeige die Datei" "docker.md" → liest Inhalt
+4. Fasst die Informationen zusammen
+```
+
