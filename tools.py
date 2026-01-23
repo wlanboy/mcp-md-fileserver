@@ -189,16 +189,13 @@ UNTERSCHIED zu "Finde Dateien mit":
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT filename, path FROM files")
+        cursor.execute("SELECT filename, content FROM files WHERE content IS NOT NULL")
         rows = cursor.fetchall()
         conn.close()
 
         results = []
-        for filename, path in rows:
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    content = f.read()
-            except Exception:
+        for filename, content in rows:
+            if not content:
                 continue
 
             content_lower = content.lower()
@@ -252,18 +249,23 @@ WICHTIG: Verwende den exakten Dateinamen aus der Suchergebnis-Liste!"""
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT filename, path FROM files WHERE filename = ?", (filename,))
+        cursor.execute("SELECT content, path FROM files WHERE filename = ?", (filename,))
         result = cursor.fetchone()
         conn.close()
 
         if not result:
             return f"Fehler: Datei '{filename}' nicht gefunden. Nutze 'Liste alle Dateien' um verfügbare Dateien zu sehen."
 
-        _, path = result
+        content, path = result
+
+        # Inhalt aus DB zurückgeben (falls vorhanden)
+        if content:
+            return content
+
+        # Fallback: Aus Dateisystem lesen (für alte Einträge ohne content)
         try:
             with open(path, "r", encoding="utf-8") as f:
-                content = f.read()
-            return content
+                return f.read()
         except FileNotFoundError:
             return f"Fehler: Die Datei '{filename}' wurde aus dem Dateisystem entfernt."
         except Exception as e:

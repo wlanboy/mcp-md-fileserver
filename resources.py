@@ -19,13 +19,19 @@ def register_resources(app):
 
         with sqlite3.connect(DB_PATH) as conn:
             cur = conn.cursor()
-            cur.execute("SELECT path FROM files WHERE filename = ?", (filename,))
+            cur.execute("SELECT content, path FROM files WHERE filename = ?", (filename,))
             result = cur.fetchone()
 
         if not result:
             return f"Fehler: Datei '{filename}' nicht gefunden"
 
-        path = result[0]
+        content, path = result
+
+        # Inhalt aus DB zurückgeben (falls vorhanden)
+        if content:
+            return content
+
+        # Fallback: Aus Dateisystem lesen (für alte Einträge ohne content)
         try:
             with open(path, encoding="utf-8") as f:
                 return f.read()
