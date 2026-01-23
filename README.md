@@ -102,3 +102,5 @@ LLM:
 4. Fasst die Informationen zusammen
 ```
 
+## Beispiel prompt
+[Beispielprompt](qwen-thinking-prompt.md)
