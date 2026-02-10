@@ -54,7 +54,7 @@ Ein Model Context Protocol (MCP) Server zur Verwaltung einer Markdown-Wissensdat
 ### 2.2 Unterstützte NLP-Modelle
 
 - `en_core_web_sm` - Englisch (Standard)
-- `de_core_web_sm` - Deutsch
+- `de_core_news_sm` - Deutsch
 - Weitere spaCy-kompatible Modelle
 
 ---
@@ -542,7 +542,7 @@ uvicorn>=0.36.0      # ASGI-Server
 
 ```bash
 python -m spacy download en_core_web_sm  # Englisch
-python -m spacy download de_core_web_sm  # Deutsch
+python -m spacy download de_core_news_sm  # Deutsch
 ```
 
 ---
