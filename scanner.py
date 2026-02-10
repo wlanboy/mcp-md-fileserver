@@ -4,6 +4,7 @@ import os
 import time
 import sqlite3
 from db import update_file_entry, init_db
+from extractor import ensure_models
 from config import SCAN_FOLDER, SCAN_INTERVAL, DB_PATH
 
 
@@ -41,6 +42,7 @@ def cleanup_deleted_files(found_files: set[str]):
 
 def periodic_scan():
     print(f"[Scanner gestartet] Überwache: {SCAN_FOLDER} alle {SCAN_INTERVAL} Sekunden")
+    ensure_models()
     init_db()
     while True:
         found_files = scan_markdown_files(SCAN_FOLDER)
