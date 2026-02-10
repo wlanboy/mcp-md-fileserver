@@ -2,12 +2,12 @@
 
 import sqlite3
 import os
-from config import DB_PATH, NLP_MODEL
-from extractor import extract_keywords
+from config import DB_PATH
+from extractor import extract_keywords, detect_language
 
 
-def _migrate_add_content_column(conn):
-    """Fügt die content-Spalte hinzu, falls sie in einer älteren DB fehlt."""
+def _migrate_columns(conn):
+    """Fügt fehlende Spalten hinzu (für bestehende DBs)."""
     cur = conn.cursor()
     cur.execute("PRAGMA table_info(files)")
     columns = [row[1] for row in cur.fetchall()]
@@ -15,6 +15,10 @@ def _migrate_add_content_column(conn):
         cur.execute("ALTER TABLE files ADD COLUMN content TEXT")
         conn.commit()
         print("[Migration] content-Spalte zur Datenbank hinzugefügt")
+    if "language" not in columns:
+        cur.execute("ALTER TABLE files ADD COLUMN language TEXT")
+        conn.commit()
+        print("[Migration] language-Spalte zur Datenbank hinzugefügt")
 
 
 def init_db():
@@ -30,11 +34,12 @@ def init_db():
             path TEXT,
             mtime REAL,
             keywords TEXT,
-            content TEXT
+            content TEXT,
+            language TEXT
         )
         """)
-        # Migration: content-Spalte hinzufügen falls sie fehlt (für bestehende DBs)
-        _migrate_add_content_column(conn)
+        # Migration: fehlende Spalten hinzufügen (für bestehende DBs)
+        _migrate_columns(conn)
 
 def update_file_entry(path, filename, mtime):
     """Aktualisiert oder fügt einen Dateieintrag hinzu, wenn sich das Änderungsdatum geändert hat."""
@@ -47,13 +52,14 @@ def update_file_entry(path, filename, mtime):
             try:
                 with open(path, encoding="utf-8") as f:
                     content = f.read()
-                keywords = extract_keywords(content, model=NLP_MODEL)
+                language = detect_language(content)
+                keywords = extract_keywords(content, language=language)
                 keyword_str = ",".join(sorted(set(keywords)))
                 cur.execute("""
-                    REPLACE INTO files (filename, path, mtime, keywords, content)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (filename, path, mtime, keyword_str, content))
+                    REPLACE INTO files (filename, path, mtime, keywords, content, language)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (filename, path, mtime, keyword_str, content, language))
                 conn.commit()
-                print(f"[Aktualisiert] {filename} mit {len(keywords)} Stichwörtern")
+                print(f"[Aktualisiert] {filename} ({language}) mit {len(keywords)} Stichwörtern")
             except Exception as e:
                 print(f"[Fehler] Datei konnte nicht verarbeitet werden: {path}\n{e}")
