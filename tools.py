@@ -11,67 +11,57 @@ CONTENT_PREFIX = "markdowndatei://"
 
 @dataclass
 class MarkdownFile:
-    """Eine indexierte Markdown-Datei mit Metadaten."""
-    filename: str = field(metadata={"description": "Der Dateiname inkl. .md Endung"})
-    uri: str = field(metadata={"description": "Die URI zum direkten Abruf des Inhalts"})
-    keywords: list[str] = field(metadata={"description": "Automatisch extrahierte Stichwörter"})
+    """schema:DigitalDocument – Ein indexiertes Markdown-Dokument mit Metadaten."""
+    filename: str = field(metadata={"description": "schema:name – Dateiname inkl. .md Endung"})
+    uri: str = field(metadata={"description": "schema:url – URI zum direkten Abruf des Inhalts"})
+    keywords: list[str] = field(metadata={"description": "schema:keywords – Automatisch extrahierte Stichwörter"})
+    language: str = field(metadata={"description": "schema:inLanguage – Erkannte Sprache (ISO-639-1, z.B. 'en', 'de')"})
 
 
 @dataclass
 class SearchResult:
-    """Ein Volltextsuche-Treffer mit Kontext."""
-    filename: str = field(metadata={"description": "Der Dateiname"})
-    matches: int = field(metadata={"description": "Anzahl der Treffer in dieser Datei"})
-    preview: str = field(metadata={"description": "Textausschnitt mit dem ersten Treffer"})
+    """Ergebnis einer schema:SearchAction – Volltextsuche-Treffer mit Kontext."""
+    filename: str = field(metadata={"description": "schema:name – Dateiname des Treffers"})
+    matches: int = field(metadata={"description": "schema:resultCount – Anzahl der Treffer in dieser Datei"})
+    preview: str = field(metadata={"description": "schema:description – Textausschnitt mit dem ersten Treffer"})
 
 
 def register_tools(app):
     """Registriert alle Tools bei der FastMCP-App."""
 
     @app.tool(
-        name="Finde Dateien mit",
-        description="""Durchsucht die Wissensdatenbank nach Dokumenten, die bestimmte Stichwörter enthalten.
-
-WANN NUTZEN:
-- Wenn du Dokumente zu einem bestimmten Thema finden möchtest
-- Wenn der Nutzer nach Informationen zu einem Konzept fragt
-- Als erster Schritt vor dem Lesen von Dateiinhalten
-
-EINGABE:
-- Liste von Stichwörtern (Substantive, Verben, Fachbegriffe)
-- Nutze mehrere verwandte Begriffe für bessere Ergebnisse
-- Beispiel: ["python", "function", "async"] für asynchrone Python-Funktionen
-
-AUSGABE:
-- Liste von Dateien mit passenden Stichwörtern
-- Jede Datei enthält: filename, uri, keywords
-- Leere Liste wenn nichts gefunden
-
-TIPPS:
-- Verwende Synonyme und verwandte Begriffe
-- Englische UND deutsche Begriffe probieren
-- Bei 0 Treffern: allgemeinere Begriffe verwenden"""
+        name="search-by-keywords",
+        description="schema:SearchAction – Sucht schema:DigitalDocument anhand von schema:keywords. "
+                    "Gibt Dokumente zurück, deren extrahierte Stichwörter mindestens einen der Suchbegriffe enthalten. "
+                    "Optional filterbar nach schema:inLanguage."
     )
     def search_by_keywords(
         keywords: Annotated[
             list[str],
-            "Liste von Suchbegriffen. Beispiel: ['docker', 'container', 'build']"
-        ]
+            "Suchbegriffe, z.B. ['docker', 'container', 'build']"
+        ],
+        language: Annotated[
+            str | None,
+            "ISO-639-1 Sprachfilter, z.B. 'de' oder 'en'. Wenn nicht angegeben, werden alle Sprachen durchsucht."
+        ] = None
     ) -> list[MarkdownFile]:
         if not keywords:
             return []
 
         query_keywords = set(kw.strip().lower() for kw in keywords)
+        lang_filter = language.strip().lower() if language else None
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT filename, keywords FROM files")
+        cursor.execute("SELECT filename, keywords, language FROM files")
         rows = cursor.fetchall()
         conn.close()
 
         matched = []
-        for filename, keyword_str in rows:
+        for filename, keyword_str, file_lang in rows:
             if not keyword_str:
+                continue
+            if lang_filter and (file_lang or "unknown") != lang_filter:
                 continue
             file_keywords = set(kw.strip().lower() for kw in keyword_str.split(","))
             if query_keywords & file_keywords:
@@ -79,72 +69,74 @@ TIPPS:
                     MarkdownFile(
                         filename=filename,
                         uri=f"{CONTENT_PREFIX}{filename}",
-                        keywords=list(file_keywords)
+                        keywords=list(file_keywords),
+                        language=file_lang or "unknown"
                     )
                 )
 
         return matched
 
     @app.tool(
-        name="Liste alle Dateien",
-        description="""Gibt eine vollständige Liste aller indexierten Markdown-Dokumente zurück.
-
-WANN NUTZEN:
-- Wenn du einen Überblick über alle verfügbaren Dokumente brauchst
-- Wenn du nicht weißt, welche Stichwörter du suchen sollst
-- Um dem Nutzer zu zeigen, welche Themen abgedeckt sind
-
-AUSGABE:
-- Alle Dateien mit ihren Stichwörtern
-- Sortiert nach Dateiname
-
-TIPP: Nutze die keywords in der Ausgabe, um relevante Dateien zu identifizieren."""
+        name="list-all-files",
+        description="schema:DiscoverAction – Gibt eine schema:ItemList aller indexierten schema:DigitalDocument zurück, "
+                    "jeweils mit schema:name, schema:keywords und schema:inLanguage. "
+                    "Optional filterbar nach schema:inLanguage."
     )
-    def list_all_files() -> list[MarkdownFile]:
+    def list_all_files(
+        language: Annotated[
+            str | None,
+            "ISO-639-1 Sprachfilter, z.B. 'de' oder 'en'. Wenn nicht angegeben, werden alle Dateien zurückgegeben."
+        ] = None
+    ) -> list[MarkdownFile]:
+        lang_filter = language.strip().lower() if language else None
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT filename, keywords FROM files")
+        cursor.execute("SELECT filename, keywords, language FROM files")
         rows = cursor.fetchall()
         conn.close()
 
         files = []
-        for filename, keyword_str in rows:
+        for filename, keyword_str, file_lang in rows:
+            if lang_filter and (file_lang or "unknown") != lang_filter:
+                continue
             keywords = [kw.strip() for kw in keyword_str.split(",")] if keyword_str else []
             files.append(
                 MarkdownFile(
                     filename=filename,
                     uri=f"{CONTENT_PREFIX}{filename}",
-                    keywords=keywords
+                    keywords=keywords,
+                    language=file_lang or "unknown"
                 )
             )
 
         return files
 
     @app.tool(
-        name="Zeige alle Stichwörter",
-        description="""Listet alle verfügbaren Stichwörter in der Wissensdatenbank auf.
-
-WANN NUTZEN:
-- Als ERSTER Schritt, wenn du nicht weißt, welche Begriffe suchbar sind
-- Um dem Nutzer zu zeigen, welche Themen in der Datenbank abgedeckt sind
-- Um passende Suchbegriffe für "Finde Dateien mit" zu finden
-
-AUSGABE:
-- Alphabetisch sortierte Liste aller einzigartigen Stichwörter
-- Anzahl der Dateien pro Stichwort
-
-TIPP: Die häufigsten Stichwörter zeigen die Schwerpunkte der Wissensdatenbank."""
+        name="list-all-keywords",
+        description="schema:DiscoverAction – Listet alle schema:DefinedTerm (extrahierte Stichwörter) mit der Anzahl "
+                    "zugehöriger schema:DigitalDocument auf. Zeigt das Themenspektrum der Wissensdatenbank. "
+                    "Optional filterbar nach schema:inLanguage."
     )
-    def list_all_keywords() -> dict[str, int]:
+    def list_all_keywords(
+        language: Annotated[
+            str | None,
+            "ISO-639-1 Sprachfilter, z.B. 'de' oder 'en'. Wenn nicht angegeben, werden Stichwörter aller Sprachen angezeigt."
+        ] = None
+    ) -> dict[str, int]:
+        lang_filter = language.strip().lower() if language else None
+
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT keywords FROM files")
+        cursor.execute("SELECT keywords, language FROM files")
         rows = cursor.fetchall()
         conn.close()
 
         keyword_counts: dict[str, int] = {}
-        for (keyword_str,) in rows:
+        for keyword_str, file_lang in rows:
             if not keyword_str:
+                continue
+            if lang_filter and (file_lang or "unknown") != lang_filter:
                 continue
             for kw in keyword_str.split(","):
                 kw = kw.strip().lower()
@@ -154,48 +146,38 @@ TIPP: Die häufigsten Stichwörter zeigen die Schwerpunkte der Wissensdatenbank.
         return dict(sorted(keyword_counts.items()))
 
     @app.tool(
-        name="Volltextsuche",
-        description="""Durchsucht den INHALT aller Markdown-Dateien nach einem Suchbegriff.
-
-WANN NUTZEN:
-- Wenn "Finde Dateien mit" keine Ergebnisse liefert
-- Für exakte Begriffe, die keine extrahierten Stichwörter sind
-- Für Codebeispiele, Konfigurationswerte, URLs, etc.
-- Wenn der Nutzer nach einem spezifischen Text sucht
-
-EINGABE:
-- query: Der Suchbegriff (kann auch mehrere Wörter sein)
-- Beispiel: "docker-compose.yml" oder "kubectl apply"
-
-AUSGABE:
-- Liste von Dateien mit Treffern
-- Anzahl der Treffer pro Datei
-- Textvorschau mit dem ersten Treffer
-
-UNTERSCHIED zu "Finde Dateien mit":
-- "Finde Dateien mit": Sucht nur in extrahierten Stichwörtern (Substantive/Verben)
-- "Volltextsuche": Sucht im gesamten Dateiinhalt (findet alles)"""
+        name="fulltext-search",
+        description="schema:SearchAction – Durchsucht schema:text aller schema:DigitalDocument nach einem Textbegriff. "
+                    "Findet auch Codebeispiele, URLs und Konfigurationswerte, die nicht als schema:keywords extrahiert werden. "
+                    "Optional filterbar nach schema:inLanguage."
     )
     def fulltext_search(
         query: Annotated[
             str,
-            "Suchbegriff für die Volltextsuche. Beispiel: 'docker-compose' oder 'SELECT * FROM'"
-        ]
+            "Suchbegriff, z.B. 'docker-compose' oder 'SELECT * FROM'"
+        ],
+        language: Annotated[
+            str | None,
+            "ISO-639-1 Sprachfilter, z.B. 'de' oder 'en'. Wenn nicht angegeben, werden alle Sprachen durchsucht."
+        ] = None
     ) -> list[SearchResult]:
         if not query or len(query.strip()) < 2:
             return []
 
         query_lower = query.strip().lower()
+        lang_filter = language.strip().lower() if language else None
 
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("SELECT filename, content FROM files WHERE content IS NOT NULL")
+        cursor.execute("SELECT filename, content, language FROM files WHERE content IS NOT NULL")
         rows = cursor.fetchall()
         conn.close()
 
         results = []
-        for filename, content in rows:
+        for filename, content, file_lang in rows:
             if not content:
+                continue
+            if lang_filter and (file_lang or "unknown") != lang_filter:
                 continue
 
             content_lower = content.lower()
@@ -221,27 +203,14 @@ UNTERSCHIED zu "Finde Dateien mit":
         return results
 
     @app.tool(
-        name="Zeige die Datei",
-        description="""Liest und gibt den vollständigen Inhalt einer Markdown-Datei zurück.
-
-WANN NUTZEN:
-- Nachdem du mit "Finde Dateien mit" oder "Liste alle Dateien" relevante Dateien gefunden hast
-- Wenn der Nutzer den Inhalt eines bestimmten Dokuments sehen möchte
-
-EINGABE:
-- filename: Der exakte Dateiname aus der vorherigen Suche (inkl. .md)
-- Beispiel: "kubernetes-basics.md"
-
-AUSGABE:
-- Der vollständige Markdown-Inhalt der Datei
-- Fehlermeldung wenn Datei nicht existiert
-
-WICHTIG: Verwende den exakten Dateinamen aus der Suchergebnis-Liste!"""
+        name="get-file-by-name",
+        description="schema:ReadAction – Gibt den vollständigen schema:text eines schema:DigitalDocument zurück. "
+                    "Der schema:name muss exakt angegeben werden (inkl. .md) und kann über die Such-Tools ermittelt werden."
     )
     def get_file_by_name(
         filename: Annotated[
             str,
-            "Exakter Dateiname inkl. .md Endung. Beispiel: 'docker-compose.md'"
+            "Exakter Dateiname inkl. .md Endung, z.B. 'kubernetes-basics.md'"
         ]
     ) -> str:
         if not filename:
@@ -254,7 +223,7 @@ WICHTIG: Verwende den exakten Dateinamen aus der Suchergebnis-Liste!"""
         conn.close()
 
         if not result:
-            return f"Fehler: Datei '{filename}' nicht gefunden. Nutze 'Liste alle Dateien' um verfügbare Dateien zu sehen."
+            return f"Fehler: Datei '{filename}' nicht gefunden. Nutze 'list-all-files' um verfügbare Dateien zu sehen."
 
         content, path = result
 
