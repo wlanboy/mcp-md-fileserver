@@ -10,7 +10,9 @@ def register_resources(app):
 
     @app.resource(
         "markdowndatei://{filename}",
-        description="Direkter Zugriff auf den Inhalt einer Markdown-Datei über ihre URI."
+        description="schema:DigitalDocument (schema:encodingFormat: text/markdown) – Liefert den vollständigen "
+                    "schema:text eines indexierten Dokuments anhand seines schema:name. "
+                    "Der Dateiname muss exakt angegeben werden (inkl. .md Endung) und kann über die Such-Tools ermittelt werden."
     )
     def get_file_content(filename: str) -> str:
         """Resource-Handler für Markdown-Dateien."""
@@ -46,7 +48,9 @@ def register_prompts(app):
 
     @app.prompt(
         name="Thema recherchieren",
-        description="Hilft bei der systematischen Recherche zu einem Thema in der Wissensdatenbank."
+        description="schema:SearchAction + schema:ReviewAction – Systematische Recherche zu einem schema:Thing: "
+                    "sucht relevante schema:DigitalDocument per schema:keywords, "
+                    "liest die Treffer und fasst die wichtigsten Erkenntnisse strukturiert zusammen."
     )
     def research_topic(topic: str) -> str:
         return f"""Ich möchte alles über "{topic}" aus der Wissensdatenbank erfahren.
@@ -62,7 +66,8 @@ ob eines davon indirekt relevant sein könnte."""
 
     @app.prompt(
         name="Dokument zusammenfassen",
-        description="Erstellt eine Zusammenfassung eines bestimmten Dokuments."
+        description="schema:ReviewAction – Erstellt eine strukturierte Zusammenfassung eines schema:DigitalDocument "
+                    "mit schema:about, Kernpunkten, relevanten Details und verwandten schema:keywords."
     )
     def summarize_document(filename: str) -> str:
         return f"""Bitte erstelle eine Zusammenfassung des Dokuments "{filename}".
@@ -77,7 +82,8 @@ Gehe so vor:
 
     @app.prompt(
         name="Wissenslücke finden",
-        description="Analysiert welche Themen in der Wissensdatenbank fehlen könnten."
+        description="schema:AssessAction – Gap-Analyse für einen schema:DataCatalog-Bereich: vergleicht die vorhandenen "
+                    "schema:DigitalDocument mit dem erwarteten Themenspektrum und schlägt fehlende Inhalte vor."
     )
     def find_knowledge_gaps(domain: str) -> str:
         return f"""Analysiere die Wissensdatenbank im Bereich "{domain}".
