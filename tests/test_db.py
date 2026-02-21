@@ -1,7 +1,6 @@
 # tests/test_db.py
 
 import sqlite3
-import pytest
 from unittest.mock import patch
 
 from db import _migrate_columns, init_db, update_file_entry

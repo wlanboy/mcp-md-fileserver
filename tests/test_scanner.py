@@ -1,8 +1,7 @@
 # tests/test_scanner.py
 
 import sqlite3
-import pytest
-from unittest.mock import patch, call
+from unittest.mock import patch
 
 from scanner import scan_markdown_files, cleanup_deleted_files
 

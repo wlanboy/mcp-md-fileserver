@@ -1,6 +1,5 @@
 # tests/test_extractor.py
 
-import pytest
 from unittest.mock import patch, MagicMock
 
 from extractor import _strip_markdown, _deduplicate_keywords, _token_keyword, detect_language
