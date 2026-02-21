@@ -12,29 +12,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # https://github.com/marketplace/actions/checkout
       - uses: actions/checkout@v6
-      # https://github.com/marketplace/actions/astral-sh-setup-uv
-      - uses: astral-sh/setup-uv@v7
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
-
-      - name: Set up Python
-        run: uv python install
+          enable-cache: true # Enormer Speed-Boost für Folgeruns
 
       - name: Install dependencies
-        run: uv sync
+        # --frozen stellt sicher, dass exakt deine uv.lock verwendet wird
+        run: uv sync --frozen
 
-      - name: Check syntax
-        run: |
-          uv run python -m py_compile main.py
-          uv run python -m py_compile config.py
-          uv run python -m py_compile db.py
-          uv run python -m py_compile extractor.py
-          uv run python -m py_compile resources.py
-          uv run python -m py_compile scanner.py
-          uv run python -m py_compile tools.py
+      - name: Lint & Syntax (Ruff)
+        # Ersetzt das manuelle py_compile für jede Datei. 
+        # Prüft das gesamte Projekt (inkl. scanner, extractor, etc.) auf einmal.
+        run: uv run ruff check .
+
+      - name: Type Check (Pyright)
+        # FastMCP profitiert extrem von Type-Checks für Tools und Resources
+        run: uv run pyright .
+
+      - name: Run Tests
+        # Führt deine Tests aus (erwartet pytest im Projekt)
+        run: uv run pytest
 
       - name: Verify FastMCP app imports
+        # Letzter Check: Lässt sich die App ohne Environment-Fehler importieren?
         run: |
-          uv run python -c "from main import app; print('FastMCP app OK')"
+          uv run python -c "from main import app; print('🚀 FastMCP app OK')"

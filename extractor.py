@@ -18,7 +18,7 @@ def ensure_models():
             continue
         print(f"[Download] spaCy-Modell '{model_name}' wird heruntergeladen...")
         try:
-            spacy.cli.download(model_name)
+            spacy.cli.download(model_name)  # type: ignore[attr-defined]
             print(f"[Download] '{model_name}' erfolgreich installiert")
         except SystemExit:
             print(f"[Warnung] spaCy-Modell '{model_name}' konnte nicht installiert werden, überspringe")
