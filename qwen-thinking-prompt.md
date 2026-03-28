@@ -1,4 +1,12 @@
-# example prompt
+# Qwen Thinking Prompt Example
+
+Dieses Dokument zeigt ein Beispiel, wie ein Qwen-Modell mit aktiviertem Thinking-Modus
+eine Benutzeranfrage an den MCP-MD-Fileserver verarbeitet. Es illustriert den mehrstufigen
+Reasoning-Prozess: initiales Denken, Tool-Aufruf mit Zwischenreflexion und finales Ergebnis.
+
+---
+
+## example prompt
 
 ```Plaintext
 haben wir informationen über openwrt?
