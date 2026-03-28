@@ -43,7 +43,11 @@ Ein MCP-Server (Model Context Protocol) zur Verwaltung von Markdown-Dokumenten m
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Dependencies installieren
+uv lock --upgrade
 uv sync
+uv run pytest
+uv run pyright
+uv run ruff check
 
 # spaCy-Modell herunterladen
 uv run -- python -m spacy download en_core_web_sm  # Englisch
@@ -92,7 +96,7 @@ Server-URL: `http://localhost:8000/mcp`
 
 ## Beispiel-Interaktion
 
-```
+```text
 Nutzer: Was wissen wir über Docker?
 
 LLM:
@@ -103,4 +107,5 @@ LLM:
 ```
 
 ## Beispiel prompt
+
 [Beispielprompt](qwen-thinking-prompt.md)
