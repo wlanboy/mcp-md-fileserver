@@ -1,10 +1,12 @@
 # main.py
 
+import threading
 from fastmcp import FastMCP
 
 from config import DB_PATH
 from tools import register_tools
 from resources import register_resources, register_prompts
+from scanner import periodic_scan
 
 # App erstellen
 app = FastMCP(
@@ -19,5 +21,7 @@ register_prompts(app)
 
 
 if __name__ == "__main__":
+    thread = threading.Thread(target=periodic_scan, daemon=True, name="md-scanner")
+    thread.start()
     print(f"[Server gestartet] Datenbank: {DB_PATH}")
     app.run(transport="http", host="0.0.0.0", port=8000, path="/mcp")
