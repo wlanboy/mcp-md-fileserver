@@ -38,7 +38,7 @@ class TestScanMarkdownFiles:
         with patch("scanner.update_file_entry"):
             result = scan_markdown_files(str(tmp_path))
 
-        assert "deep.md" in result
+        assert "sub/deep.md" in result
 
     def test_calls_update_file_entry_for_each_md(self, tmp_path):
         (tmp_path / "a.md").write_text("A")
@@ -60,7 +60,7 @@ class TestScanMarkdownFiles:
         with patch("scanner.update_file_entry", side_effect=Exception("fail")):
             result = scan_markdown_files(str(tmp_path))
 
-        # Still returns the filename even if update_file_entry raises
+        # Still returns the rel_path even if update_file_entry raises
         assert "bad.md" in result
 
     def test_update_called_with_correct_filename(self, tmp_path):
@@ -70,7 +70,7 @@ class TestScanMarkdownFiles:
             scan_markdown_files(str(tmp_path))
 
         args = mock_update.call_args
-        assert args[0][1] == "example.md"
+        assert args[0][1] == "example.md"  # root-level file: rel_path == filename
 
 
 # ── cleanup_deleted_files ─────────────────────────────────────────────────────

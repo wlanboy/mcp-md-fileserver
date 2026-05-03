@@ -15,10 +15,11 @@ def scan_markdown_files(folder: str) -> set[str]:
         for file in files:
             if file.endswith(".md"):
                 path = os.path.join(root, file)
-                found_files.add(file)
+                rel_path = os.path.relpath(path, folder)
+                found_files.add(rel_path)
                 try:
                     mtime = os.path.getmtime(path)
-                    update_file_entry(path, file, mtime)
+                    update_file_entry(path, rel_path, mtime)
                 except Exception as e:
                     print(f"[Fehler] Datei konnte nicht verarbeitet werden: {path}\n{e}")
     return found_files
